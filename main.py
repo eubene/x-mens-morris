@@ -1,175 +1,86 @@
-from AlphaBeta import *
-from BoardLogic import *
-from heuristics import *
-import time
+import game_logic
+import ai
 
-alpha = float('-inf')
-beta = float('inf')
-depth = 3
-ai_depth = 4
+game_select = """
+================================
+NINE MEN'S MORRIS (and variants)
+================================
 
-def boardOutput(board):
-		
-		print(board[0]+"(00)----------------------"+board[1]+"(01)----------------------"+board[2]+"(02)");
-		print("|                           |                           |");
-		print("|       "+board[8]+"(08)--------------"+board[9]+"(09)--------------"+board[10]+"(10)     |");
-		print("|       |                   |                    |      |");
-		print("|       |                   |                    |      |");
-		print("|       |        "+board[16]+"(16)-----"+board[17]+"(17)-----"+board[18]+"(18)       |      |");
-		print("|       |         |                   |          |      |");
-		print("|       |         |                   |          |      |");
-		print(board[3]+"(03)---"+board[11]+"(11)----"+board[19]+"(19)               "+board[20]+"(20)----"+board[12]+"(12)---"+board[4]+"(04)");
-		print("|       |         |                   |          |      |");
-		print("|       |         |                   |          |      |");
-		print("|       |        "+board[21]+"(21)-----"+board[22]+"(22)-----"+board[23]+"(23)       |      |");
-		print("|       |                   |                    |      |");
-		print("|       |                   |                    |      |");
-		print("|       "+board[13]+"(13)--------------"+board[14]+"(14)--------------"+board[15]+"(15)     |");
-		print("|                           |                           |");
-		print("|                           |                           |");
-		print(board[5]+"(05)----------------------"+board[6]+"(06)----------------------"+board[7]+"(07)");
+Which game do you want to play?
+[6]  Six Men's Morris
+[9]  Nine Men's Morris (default)
+[12] Twelve Men's Morris
+: """
 
+player_select = """
+Select players for white/black
+      ■        □
+[A] Human    Human
+[B] Human     AI    (default)
+[C]  AI      Human
+[D]  AI       AI
+[E] Manually select each turn
+: """
+d_player_select = {
+	'A': ('human', 'human'),
+	'B': ('human', 'ai'),
+	'C': ('ai', 'human'),
+	'D': ('ai', 'ai'),
+	'E': ('manual', 'manual')
+}
 
+def main():
+	# Select game
+	try:
+		n_pieces = int(input(game_select))
+	except Exception:
+		n_pieces = 9
+	except KeyboardInterrupt:
+		print('\nQuit')
+		return
+	game = game_logic.morris_game(n_pieces)
 
-def HUMAN_VS_AI(heuristic_stage1, heuristic_stage23):
-	
-	board = []
-	for i in range(24):
-		board.append("X")
+	# Select players
+	try:
+		player_types = d_player_select[input(player_select).upper()]
+	except Exception:
+		player_types = ('human', 'ai')
+	except KeyboardInterrupt:
+		print('\nQuit')
+		return
 
-	evaluation = evaluator()
-		
-	for i in range(9):
+	# Play game
+	while True:
+		game.print()
 
-		boardOutput(board)
-		finished = False
-		while not finished:
+		# Check for game end
+		msg = game.check_end()
+		if msg:
+			print(msg)
+			break
+
+		# Play a turn
+		player_type = player_types[{1: 0, -1: 1}[game.color]]
+		if player_type == 'manual':
 			try:
-
-				pos = int(input("\nPlace '1' piece: "))	
-				
-				if board[pos] == "X":
-					
-					board[pos] = '1'
-					if isCloseMill(pos, board):
-						itemPlaced = False
-						while not itemPlaced:
-							try:
-
-								pos = int(input("\nRemove '2' piece: "))
-								
-								if board[pos] == "2" and not isCloseMill(pos, board) or (isCloseMill(pos, board) and getNumberOfPieces(board, "1") == 3):
-									board[pos] = "X"
-									itemPlaced = True
-								else:
-									print("Invalid position")
-									
-							except Exception:
-								print("Input was either out of bounds or wasn't an integer")
-
-					finished = True
-
+				if input('Enter [H] for human: ').upper() == 'H':
+					player_type = 'human'
 				else:
-					print("There is already a piece there")
-
+					player_type = 'ai'
 			except Exception:
-				print("Couldn't get the input value")
-		
-		boardOutput(board)
-		evalBoard = alphaBetaPruning(board, depth, False, alpha, beta, True, heuristic_stage1)
-
-		if evalBoard.evaluator == float('-inf'):
-			print("You Lost")
-			exit(0)
-		else:
-			board = evalBoard.board
-
-	endStagesFinished = False
-	while not endStagesFinished:
-
-		boardOutput(board)
-		
-		#Get the users next move
-		userHasMoved = False
-		while not userHasMoved:
+				player_type = 'ai'
+			except KeyboardInterrupt:
+				print('\nQuit')
+				return
+		if player_type == 'human':
 			try:
-				pos = int(input("\nMove '1' piece: "))
-
-				while board[pos] != '1':
-					pos = int(input("\nMove '1' piece: ")) 
-
-				userHasPlaced = False
-				while not userHasPlaced:
-
-					newPos = int(input("'1' New Location: "))
-
-					if board[newPos] == "X":
-						board[pos] = 'X'
-						board[newPos] = '1'
-
-						if isCloseMill(newPos, board):
-							
-							userHasRemoved = False
-							while not userHasRemoved:
-								try:
-
-									pos = int(input("\nRemove '2' piece: "))
-									
-									if board[pos] == "2" and not isCloseMill(pos, board) or (isCloseMill(pos, board) and getNumberOfPieces(board, "1") == 3):
-										board[pos] = "X"
-										userHasRemoved = True
-									else:
-										print("Invalid position")
-								except Exception:
-									print("Error while accepting input")
-
-						userHasPlaced = True
-						userHasMoved = True
-
-					else:
-						print("You cannot move there")
-
-			except Exception:
-				print("You cannot move there")
-
-		if getEvaluationStage23(board) == float('inf'):
-			print("You Win!")
-			exit(0)
-
-		boardOutput(board)
-
-		evaluation = alphaBetaPruning(board, depth, False, alpha, beta, False, heuristic_stage23)
-
-		if evaluation.evaluator == float('-inf'):
-			print("You Lost")
-			exit(0)
-		else:
-			board = evaluation.board
-
+				game.human_move()
+			except KeyboardInterrupt:
+				print('\nQuit')
+				return
+		else: # player_type == 'ai'
+			print('AI plays turn')
+			game = ai.alphabeta(game, 5)
 
 if __name__ == "__main__":
-	
-	print("Welcome to Nine Mens Morris")
-	print("==========================")
-	print("Human vs AI")
-
-	HUMAN_VS_AI(numberOfPiecesHeuristic, AdvancedHeuristic)
-
-
-	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
+	main()
